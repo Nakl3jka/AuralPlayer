@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AuralPlayer — Coming Soon</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,600;14..32,700;14..32,800;14..32,900&display=swap" rel="stylesheet" />
+    <style>
+        /* ── Reset & Base ─────────────────────────────────────────────── */
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            background: #1a1a2e;
+            color: #fff;
+            user-select: none;
+        }
+
+        /* ── Sky ────────────────────────────────────────────────────── */
+        #sky {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            transition: background 1.8s ease;
+            will-change: background;
+        }
+
+        /* ── Sun / Moon ─────────────────────────────────────────────── */
+        #celestial {
+            position: absolute;
+            top: 12%;
+            right: 18%;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            z-index: 2;
+            transition: box-shadow 1.2s ease, transform 1.2s ease;
+            will-change: transform, box-shadow;
+            pointer-events: none;
+        }
+
+        #celestial.sun {
+            background: radial-gradient(circle at 30% 30%, #fff7b0, #fdb813);
+            box-shadow:
+                0 0 80px 30px rgba(253, 184, 19, 0.5),
+                0 0 160px 60px rgba(253, 184, 19, 0.2),
+                inset 0 -10px 30px rgba(200, 130, 0, 0.3);
+        }
+
+        #celestial.moon {
+            background: radial-gradient(circle at 35% 30%, #f0f0f0, #c8c8d0);
+            box-shadow:
+                0 0 60px 20px rgba(200, 200, 220, 0.3),
+                0 0 120px 50px rgba(200, 200, 220, 0.1),
+                inset -8px -8px 30px rgba(100, 100, 120, 0.2);
+            border-radius: 50%;
+        }
+
+        /* Moon craters (pseudo) */
+        #celestial.moon::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background:
+                radial-gradient(circle at 25% 35%, rgba(160, 160, 170, 0.25) 8%, transparent 10%),
+                radial-gradient(circle at 70% 55%, rgba(160, 160, 170, 0.2) 12%, transparent 14%),
+                radial-gradient(circle at 45% 75%, rgba(160, 160, 170, 0.18) 6%, transparent 8%),
+                radial-gradient(circle at 80% 25%, rgba(160, 160, 170, 0.15) 5%, transparent 7%);
+        }
+
+        /* ── Clouds ──────────────────────────────────────────────────── */
+        .cloud {
+            position: absolute;
+            z-index: 1;
+            pointer-events: none;
+            will-change: transform;
+            opacity: 0.85;
+            filter: blur(0.5px);
+        }
+
+        .cloud-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 100px;
+            box-shadow:
+                0 8px 32px rgba(255, 255, 255, 0.08),
+                inset 0 -4px 12px rgba(255, 255, 255, 0.1);
+        }
+
+        .cloud-inner::before,
+        .cloud-inner::after {
+            content: '';
+            position: absolute;
+            background: inherit;
+            border-radius: 50%;
+            box-shadow: inherit;
+        }
+
+        .cloud-inner::before {
+            width: 45%;
+            height: 75%;
+            top: -30%;
+            left: 12%;
+        }
+        .cloud-inner::after {
+            width: 55%;
+            height: 85%;
+            top: -40%;
+            right: 10%;
+        }
+
+        /* Extra bump for some clouds */
+        .cloud .bump {
+            position: absolute;
+            border-radius: 50%;
+            background: inherit;
+            box-shadow: inherit;
+        }
+        .cloud .bump-1 {
+            width: 30%;
+            height: 55%;
+            top: -20%;
+            left: 45%;
+        }
+        .cloud .bump-2 {
+            width: 25%;
+            height: 45%;
+            top: -15%;
+            right: 30%;
+        }
+
+        /* ── Dark overlay (when sun/moon is covered) ────────────────── */
+        #cloud-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 3;
+            pointer-events: none;
+            background: rgba(0, 0, 10, 0);
+            transition: background 2.0s ease;
+            will-change: background;
+        }
+
+        /* ── Glass Card ─────────────────────────────────────────────── */
+        #glass-card {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            width: min(92%, 600px);
+            padding: 3rem 2.5rem 2.8rem;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(24px) saturate(1.4);
+            -webkit-backdrop-filter: blur(24px) saturate(1.4);
+            border-radius: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow:
+                0 30px 80px rgba(0, 0, 0, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.25),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+            text-align: center;
+            transition: box-shadow 0.6s ease, background 0.6s ease;
+            /* "liquid glass" shimmer overlay */
+        }
+
+        /* Liquid glass shimmer */
+        #glass-card::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 42px;
+            padding: 2px;
+            background: conic-gradient(from 0deg at 50% 50%,
+                    rgba(255, 255, 255, 0.0) 0%,
+                    rgba(255, 255, 255, 0.10) 20%,
+                    rgba(255, 255, 255, 0.25) 40%,
+                    rgba(255, 255, 255, 0.10) 60%,
+                    rgba(255, 255, 255, 0.0) 80%,
+                    rgba(255, 255, 255, 0.0) 100%);
+            background-size: 300% 300%;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            animation: shimmerRotate 12s linear infinite;
+            z-index: -1;
+        }
+
+        @keyframes shimmerRotate {
+            0% {
+                background-position: 0% 0%;
+            }
+            100% {
+                background-position: 300% 300%;
+            }
+        }
+
+        /* Inner glow / liquid ripple */
+        #glass-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 40px;
+            background:
+                radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.06) 0%, transparent 70%),
+                radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.04) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: -1;
+            animation: liquidPulse 8s ease-in-out infinite alternate;
+        }
+
+        @keyframes liquidPulse {
+            0% {
+                opacity: 0.5;
+                transform: scale(1);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1.02);
+            }
+        }
+
+        /* ── Typography ──────────────────────────────────────────────── */
+        .brand {
+            font-size: 2.8rem;
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #ffffff 40%, #b8c6ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.1;
+            margin-bottom: 0.1rem;
+        }
+
+        .brand-sub {
+            font-size: 0.95rem;
+            font-weight: 400;
+            color: rgba(255, 255, 255, 0.55);
+            letter-spacing: 0.4px;
+            margin-bottom: 2rem;
+            -webkit-text-fill-color: rgba(255, 255, 255, 0.55);
+        }
+
+        .release-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            color: rgba(255, 255, 255, 0.35);
+            margin-bottom: 0.4rem;
+        }
+
+        .coming-soon {
+            font-size: 4.2rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #fff 30%, #a0b4ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.1;
+            margin-bottom: 0.2rem;
+            text-shadow: 0 0 60px rgba(160, 180, 255, 0.15);
+        }
+
+        /* ── Footer links (very small) ───────────────────────────────── */
+        .footer-links {
+            position: fixed;
+            bottom: 24px;
+            left: 0;
+            right: 0;
+            z-index: 20;
+            display: flex;
+            justify-content: center;
+            gap: 28px;
+            font-size: 0.7rem;
+            font-weight: 400;
+            letter-spacing: 0.3px;
+            color: rgba(255, 255, 255, 0.25);
+            text-transform: lowercase;
+            pointer-events: auto;
+            backdrop-filter: blur(2px);
+            padding: 6px 12px;
+            width: fit-content;
+            margin: 0 auto;
+            border-radius: 40px;
+            background: rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            transition: color 0.3s, background 0.3s;
+        }
+
+        .footer-links a {
+            color: inherit;
+            text-decoration: none;
+            transition: color 0.3s, transform 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .footer-links a:hover {
+            color: rgba(255, 255, 255, 0.7);
+            transform: scale(1.05);
+        }
+
+        .footer-links a .icon {
+            font-size: 0.85rem;
+            line-height: 1;
+            opacity: 0.6;
+        }
+
+        /* ── Responsive ──────────────────────────────────────────────── */
+        @media (max-width: 600px) {
+            #glass-card {
+                padding: 2.2rem 1.6rem 2.2rem;
+                width: 94%;
+                border-radius: 28px;
+            }
+            .brand {
+                font-size: 2.1rem;
+            }
+            .coming-soon {
+                font-size: 2.8rem;
+            }
+            #celestial {
+                width: 70px;
+                height: 70px;
+                top: 8%;
+                right: 10%;
+            }
+            .footer-links {
+                font-size: 0.6rem;
+                gap: 18px;
+                bottom: 16px;
+                padding: 4px 12px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .brand {
+                font-size: 1.7rem;
+            }
+            .coming-soon {
+                font-size: 2.2rem;
+            }
+            #glass-card {
+                padding: 1.6rem 1.2rem 1.8rem;
+            }
+            #celestial {
+                width: 55px;
+                height: 55px;
+                top: 6%;
+                right: 6%;
+            }
+            .footer-links {
+                font-size: 0.5rem;
+                gap: 12px;
+                bottom: 12px;
+                padding: 3px 10px;
+            }
+        }
+
+        /* ── Stars (night) ───────────────────────────────────────────── */
+        #stars {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 2.0s ease;
+        }
+        #stars.active {
+            opacity: 1;
+        }
+        .star {
+            position: absolute;
+            border-radius: 50%;
+            background: #fff;
+            animation: twinkle var(--dur, 2s) ease-in-out infinite alternate;
+        }
+        @keyframes twinkle {
+            0% {
+                opacity: 0.2;
+                transform: scale(0.8);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+        }
+
+        /* ── Horizon glow ────────────────────────────────────────────── */
+        #horizon-glow {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 35vh;
+            z-index: 0;
+            pointer-events: none;
+            background: radial-gradient(ellipse at 50% 100%, rgba(255, 180, 80, 0.0) 0%, transparent 70%);
+            transition: background 1.8s ease;
+            will-change: background;
+        }
+
+        /* ── Scrollbar hide ──────────────────────────────────────────── */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ─── SKY ─── -->
+    <div id="sky"></div>
+
+    <!-- ─── HORIZON GLOW ─── -->
+    <div id="horizon-glow"></div>
+
+    <!-- ─── STARS ─── -->
+    <div id="stars"></div>
+
+    <!-- ─── SUN / MOON ─── -->
+    <div id="celestial" class="sun"></div>
+
+    <!-- ─── CLOUDS (generated by JS) ─── -->
+
+    <!-- ─── DARK OVERLAY ─── -->
+    <div id="cloud-overlay"></div>
+
+    <!-- ─── GLASS CARD ─── -->
+    <div id="glass-card">
+        <div class="brand">AuralPlayer</div>
+        <div class="brand-sub">(platforma do muzyki free)</div>
+
+        <div class="release-label">RELEASE</div>
+        <div class="coming-soon">Coming Soon</div>
+    </div>
+
+    <!-- ─── FOOTER LINKS (very small, at the bottom) ─── -->
+    <div class="footer-links">
+        <a href="https://discord.gg/auralplayer" target="_blank" rel="noopener noreferrer">
+            <span class="icon">💬</span> discord
+        </a>
+        <a href="https://github.com/auralplayer" target="_blank" rel="noopener noreferrer">
+            <span class="icon">🐙</span> github
+        </a>
+    </div>
+
+    <script>
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  CONFIG
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        const CONFIG = {
+            cloudCount: 9,
+            sunX: 0.78, // fraction of viewport width
+            sunY: 0.16, // fraction of viewport height
+            sunRadius: 50, // px
+            minCloudSize: 120,
+            maxCloudSize: 280,
+            minSpeed: 0.08,
+            maxSpeed: 0.28,
+            minY: 0.02,
+            maxY: 0.55,
+            coverageThreshold: 0.6, // distance factor for coverage
+            maxOverlayOpacity: 0.65,
+            transitionDuration: 2000, // ms
+        };
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  DOM REFS
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        const sky = document.getElementById('sky');
+        const celestial = document.getElementById('celestial');
+        const overlay = document.getElementById('cloud-overlay');
+        const horizonGlow = document.getElementById('horizon-glow');
+        const starsContainer = document.getElementById('stars');
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  STATE
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        let isDay = true;
+        let coverage = 0;
+        let clouds = [];
+        let animationId = null;
+        let stars = [];
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  TIME / DAY-NIGHT
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function getDayStatus() {
+            const now = new Date();
+            const h = now.getHours();
+            const m = now.getMinutes();
+            const t = h + m / 60;
+            // Day: 6:00 – 20:00
+            return t >= 6 && t < 20;
+        }
+
+        function getSkyColors(day) {
+            if (day) {
+                return {
+                    sky: 'linear-gradient(170deg, #4a8bc2 0%, #7bb8e0 40%, #b5dffa 70%, #d6ecff 100%)',
+                    glow: 'radial-gradient(ellipse at 50% 100%, rgba(255,200,120,0.25) 0%, rgba(255,180,80,0.05) 50%, transparent 70%)',
+                };
+            } else {
+                return {
+                    sky: 'linear-gradient(170deg, #0a0e1a 0%, #141b33 30%, #1a2340 60%, #0f1629 100%)',
+                    glow: 'radial-gradient(ellipse at 50% 100%, rgba(60,80,140,0.15) 0%, rgba(30,40,80,0.05) 50%, transparent 70%)',
+                };
+            }
+        }
+
+        function updateTimeOfDay() {
+            const day = getDayStatus();
+            isDay = day;
+
+            const colors = getSkyColors(day);
+            sky.style.background = colors.sky;
+            horizonGlow.style.background = colors.glow;
+
+            // Celestial
+            if (day) {
+                celestial.className = 'sun';
+                celestial.style.boxShadow = `
+                        0 0 80px 30px rgba(253,184,19,0.5),
+                        0 0 160px 60px rgba(253,184,19,0.2),
+                        inset 0 -10px 30px rgba(200,130,0,0.3)
+                    `;
+            } else {
+                celestial.className = 'moon';
+                celestial.style.boxShadow = `
+                        0 0 60px 20px rgba(200,200,220,0.3),
+                        0 0 120px 50px rgba(200,200,220,0.1),
+                        inset -8px -8px 30px rgba(100,100,120,0.2)
+                    `;
+            }
+
+            // Stars
+            if (!day) {
+                starsContainer.classList.add('active');
+                if (stars.length === 0) generateStars();
+            } else {
+                starsContainer.classList.remove('active');
+            }
+
+            // Cloud colors: slightly warmer in day, cooler at night
+            document.querySelectorAll('.cloud-inner').forEach(el => {
+                const base = day ? 'rgba(255,255,255,0.70)' : 'rgba(200,210,230,0.50)';
+                el.style.background = base;
+            });
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  STARS
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function generateStars() {
+            starsContainer.innerHTML = '';
+            stars = [];
+            const count = 140 + Math.floor(Math.random() * 80);
+            for (let i = 0; i < count; i++) {
+                const el = document.createElement('div');
+                el.className = 'star';
+                const size = 1.2 + Math.random() * 2.8;
+                el.style.width = size + 'px';
+                el.style.height = size + 'px';
+                el.style.left = Math.random() * 100 + '%';
+                el.style.top = Math.random() * 80 + '%';
+                el.style.setProperty('--dur', (1.5 + Math.random() * 3) + 's');
+                el.style.animationDelay = Math.random() * 5 + 's';
+                el.style.opacity = 0.3 + Math.random() * 0.7;
+                starsContainer.appendChild(el);
+                stars.push(el);
+            }
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  CLOUDS
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function createCloudElement() {
+            const container = document.createElement('div');
+            container.className = 'cloud';
+
+            const inner = document.createElement('div');
+            inner.className = 'cloud-inner';
+
+            // Extra bumps for variety
+            if (Math.random() > 0.5) {
+                const b1 = document.createElement('div');
+                b1.className = 'bump bump-1';
+                inner.appendChild(b1);
+            }
+            if (Math.random() > 0.6) {
+                const b2 = document.createElement('div');
+                b2.className = 'bump bump-2';
+                inner.appendChild(b2);
+            }
+
+            container.appendChild(inner);
+
+            const w = CONFIG.minCloudSize + Math.random() * (CONFIG.maxCloudSize - CONFIG.minCloudSize);
+            const h = w * (0.3 + Math.random() * 0.2);
+            container.style.width = w + 'px';
+            container.style.height = h + 'px';
+
+            // Position
+            const x = -w - Math.random() * 200;
+            const y = CONFIG.minY + Math.random() * (CONFIG.maxY - CONFIG.minY);
+            container.style.left = x + 'px';
+            container.style.top = (y * window.innerHeight) + 'px';
+
+            // Opacity
+            container.style.opacity = 0.55 + Math.random() * 0.35;
+
+            // Speed
+            const speed = CONFIG.minSpeed + Math.random() * (CONFIG.maxSpeed - CONFIG.minSpeed);
+
+            // Z-index: some behind sun, some in front
+            const z = Math.random() > 0.5 ? 1 : 4;
+            container.style.zIndex = z;
+
+            document.body.appendChild(container);
+
+            return {
+                el: container,
+                inner: inner,
+                x: x,
+                y: y * window.innerHeight,
+                w: w,
+                h: h,
+                speed: speed,
+                z: z,
+                baseY: y * window.innerHeight,
+                // For coverage detection
+                cx: x + w / 2,
+                cy: y * window.innerHeight + h / 2,
+                radius: Math.max(w, h) * 0.5,
+            };
+        }
+
+        function initClouds() {
+            // Remove existing
+            document.querySelectorAll('.cloud').forEach(el => el.remove());
+            clouds = [];
+
+            for (let i = 0; i < CONFIG.cloudCount; i++) {
+                const c = createCloudElement();
+                clouds.push(c);
+                // Stagger starting positions
+                c.x = -c.w - Math.random() * window.innerWidth * 0.8;
+                c.el.style.left = c.x + 'px';
+                c.cx = c.x + c.w / 2;
+                c.cy = c.y + c.h / 2;
+            }
+        }
+
+        function updateClouds() {
+            const ww = window.innerWidth;
+            const wh = window.innerHeight;
+
+            // Sun position (fixed in viewport)
+            const sunX = ww * CONFIG.sunX;
+            const sunY = wh * CONFIG.sunY;
+            const sunR = CONFIG.sunRadius;
+
+            let totalCoverage = 0;
+
+            for (const c of clouds) {
+                // Move
+                c.x += c.speed * 0.6;
+                c.el.style.left = c.x + 'px';
+
+                // Wrap
+                if (c.x > ww + 100) {
+                    c.x = -c.w - Math.random() * 200;
+                    c.el.style.left = c.x + 'px';
+                    c.y = (CONFIG.minY + Math.random() * (CONFIG.maxY - CONFIG.minY)) * wh;
+                    c.el.style.top = c.y + 'px';
+                    c.baseY = c.y;
+                    // Randomize speed a bit
+                    c.speed = CONFIG.minSpeed + Math.random() * (CONFIG.maxSpeed - CONFIG.minSpeed);
+                }
+
+                // Update center
+                c.cx = c.x + c.w / 2;
+                c.cy = c.y + c.h / 2;
+                c.radius = Math.max(c.w, c.h) * 0.5;
+
+                // ── Coverage detection ──
+                // Only clouds in front (z-index 4) can cover the sun
+                if (c.z === 4) {
+                    const dx = c.cx - sunX;
+                    const dy = c.cy - sunY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const threshold = c.radius + sunR;
+
+                    if (dist < threshold) {
+                        // How much coverage? 0..1
+                        const factor = 1 - (dist / threshold);
+                        // Scale by cloud size relative to sun
+                        const sizeFactor = Math.min(1, c.radius / (sunR * 1.2));
+                        const cover = factor * sizeFactor * 0.9;
+                        totalCoverage = Math.min(1, totalCoverage + cover);
+                    }
+                }
+            }
+
+            // Apply coverage with smoothing
+            const target = totalCoverage * CONFIG.maxOverlayOpacity;
+            coverage += (target - coverage) * 0.04;
+            coverage = Math.max(0, Math.min(CONFIG.maxOverlayOpacity, coverage));
+
+            overlay.style.background = `rgba(0, 0, 10, ${coverage})`;
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  RESIZE
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function handleResize() {
+            const ww = window.innerWidth;
+            const wh = window.innerHeight;
+
+            // Update celestial position
+            celestial.style.left = (ww * CONFIG.sunX - CONFIG.sunRadius) + 'px';
+            celestial.style.top = (wh * CONFIG.sunY - CONFIG.sunRadius) + 'px';
+            celestial.style.width = CONFIG.sunRadius * 2 + 'px';
+            celestial.style.height = CONFIG.sunRadius * 2 + 'px';
+
+            // Reposition clouds proportionally
+            for (const c of clouds) {
+                const yRatio = c.baseY / window.innerHeight;
+                c.y = yRatio * wh;
+                c.el.style.top = c.y + 'px';
+                c.cy = c.y + c.h / 2;
+            }
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  LOOP
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function loop() {
+            updateClouds();
+            animationId = requestAnimationFrame(loop);
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  INIT
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        function init() {
+            // Set celestial size
+            const r = CONFIG.sunRadius;
+            celestial.style.width = r * 2 + 'px';
+            celestial.style.height = r * 2 + 'px';
+
+            // Initial time
+            updateTimeOfDay();
+
+            // Clouds
+            initClouds();
+
+            // Resize
+            handleResize();
+
+            // Start loop
+            if (animationId) cancelAnimationFrame(animationId);
+            loop();
+
+            // Listeners
+            window.addEventListener('resize', () => {
+                handleResize();
+            });
+
+            // Update time every minute
+            setInterval(() => {
+                const wasDay = isDay;
+                updateTimeOfDay();
+                // If day/night changed, refresh cloud colors
+                if (wasDay !== isDay) {
+                    document.querySelectorAll('.cloud-inner').forEach(el => {
+                        const base = isDay ? 'rgba(255,255,255,0.70)' : 'rgba(200,210,230,0.50)';
+                        el.style.background = base;
+                    });
+                }
+            }, 30000);
+
+            // Also on visibility change (tab switch)
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    updateTimeOfDay();
+                }
+            });
+
+            console.log('🌤️ AuralPlayer — Coming Soon');
+        }
+
+        // ─── Start when DOM ready ──────────────────────────────────────
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>
