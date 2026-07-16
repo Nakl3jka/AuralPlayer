@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AuralPlayer – Profil</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background: #0b0b0e;
+            color: #e4e4f0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .app {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 0;
+            border-bottom: 1px solid #2a2a36;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo-area img {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: #2a2a36;
+            padding: 4px;
+        }
+        .logo-area h1 {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #a78bfa, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .nav-links a {
+            color: #b0b0c8;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover {
+            color: #c4b5fd;
+        }
+        .btn-logout {
+            background: #2a2a36;
+            border: none;
+            color: #f87171;
+            padding: 8px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .btn-logout:hover {
+            background: #3a3a4a;
+        }
+
+        /* ---------- PROFIL ---------- */
+        .profile-card {
+            background: #17171f;
+            border: 1px solid #2a2a36;
+            border-radius: 24px;
+            padding: 30px;
+            margin: 24px 0;
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .profile-avatar img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #7c3aed;
+        }
+        .profile-info {
+            flex: 1;
+        }
+        .profile-info h2 {
+            font-size: 26px;
+            margin-bottom: 4px;
+        }
+        .profile-info .email {
+            color: #8888a0;
+        }
+
+        .btn-primary {
+            background: #7c3aed;
+            border: none;
+            color: #fff;
+            padding: 12px 28px;
+            border-radius: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            font-size: 15px;
+        }
+        .btn-primary:hover {
+            background: #6d28d9;
+            transform: scale(1.02);
+        }
+
+        .btn-secondary {
+            background: #2a2a36;
+            border: none;
+            color: #b0b0c8;
+            padding: 8px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .btn-secondary:hover {
+            background: #3a3a4a;
+        }
+
+        .section-title {
+            font-size: 20px;
+            margin: 30px 0 16px;
+            color: #c4b5fd;
+        }
+
+        .song-item {
+            background: #17171f;
+            border: 1px solid #2a2a36;
+            border-radius: 12px;
+            padding: 14px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .song-item .info {
+            display: flex;
+            flex-direction: column;
+        }
+        .song-item .title {
+            font-weight: 600;
+        }
+        .song-item .album {
+            font-size: 13px;
+            color: #8888a0;
+        }
+        .song-item .status {
+            font-size: 12px;
+            background: #22222e;
+            padding: 4px 12px;
+            border-radius: 20px;
+            color: #a0a0b8;
+        }
+
+        .empty {
+            color: #5a5a72;
+            font-style: italic;
+        }
+
+        /* ---------- MODAL (dodaj utwór) ---------- */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: #17171f;
+            border: 1px solid #2a2a36;
+            border-radius: 24px;
+            padding: 32px;
+            max-width: 480px;
+            width: 90%;
+        }
+        .modal h2 {
+            margin-bottom: 16px;
+            color: #a78bfa;
+        }
+        .modal .form-group {
+            margin-bottom: 16px;
+        }
+        .modal .form-group label {
+            display: block;
+            font-size: 13px;
+            color: #b0b0c8;
+            margin-bottom: 4px;
+        }
+        .modal .form-group input,
+        .modal .form-group select {
+            width: 100%;
+            padding: 12px;
+            background: #22222e;
+            border: 1px solid #3a3a4a;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+        }
+        .modal .form-group input:focus,
+        .modal .form-group select:focus {
+            border-color: #7c3aed;
+        }
+        .modal .form-row {
+            display: flex;
+            gap: 12px;
+        }
+        .modal .form-row .form-group {
+            flex: 1;
+        }
+        .modal .btn-row {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 8px;
+        }
+        .modal .btn-row button {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .modal .btn-row .btn-cancel {
+            background: #2a2a36;
+            color: #b0b0c8;
+        }
+        .modal .btn-row .btn-cancel:hover {
+            background: #3a3a4a;
+        }
+        .modal .btn-row .btn-confirm {
+            background: #7c3aed;
+            color: #fff;
+        }
+        .modal .btn-row .btn-confirm:hover {
+            background: #6d28d9;
+        }
+
+        @media (max-width: 600px) {
+            .header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .profile-card {
+                flex-direction: column;
+                text-align: center;
+            }
+            .modal {
+                padding: 24px;
+            }
+            .modal .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app">
+        <header class="header">
+            <div class="logo-area">
+                <img src="logo.png" alt="AuralPlayer" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 48 48%22%3E%3Crect width=%2248%22 height=%2248%22 fill=%227c3aed%22/%3E%3Ctext x=%2224%22 y=%2232%22 font-size=%2224%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22sans-serif%22 font-weight=%22bold%22%3E♫%3C/text%3E%3C/svg%3E'" />
+                <h1>AuralPlayer</h1>
+            </div>
+            <div class="nav-links">
+                <a href="index.html">Strona główna</a>
+                <button class="btn-logout" id="logoutBtn">Wyloguj</button>
+            </div>
+        </header>
+
+        <!-- Profil -->
+        <div class="profile-card" id="profileCard">
+            <div class="profile-avatar">
+                <img id="profileAvatar" src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%222a2a36%22/%3E%3Ctext x=%2250%22 y=%2265%22 font-size=%2250%22 text-anchor=%22middle%22 fill=%225a5a72%22%3E👤%3C/text%3E%3C/svg%3E" alt="avatar" />
+            </div>
+            <div class="profile-info">
+                <h2 id="profileUsername">Użytkownik</h2>
+                <p class="email" id="profileEmail">email@example.com</p>
+                <button class="btn-primary" id="addSongBtn">➕ Dodaj utwór</button>
+            </div>
+        </div>
+
+        <!-- Lista utworów użytkownika -->
+        <h2 class="section-title">🎵 Twoje utwory</h2>
+        <div id="userSongsContainer">
+            <p class="empty">Nie dodałeś jeszcze żadnych utworów.</p>
+        </div>
+
+        <!-- MODAL: Dodaj utwór -->
+        <div class="modal-overlay" id="addSongModal">
+            <div class="modal">
+                <h2>Dodaj nowy utwór</h2>
+                <form id="addSongForm">
+                    <div class="form-group">
+                        <label>Tytuł *</label>
+                        <input type="text" id="songTitle" placeholder="Nazwa utworu" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Album</label>
+                        <input type="text" id="songAlbum" placeholder="Nazwa albumu (opcjonalnie)" />
+                    </div>
+                    <div class="form-group">
+                        <label>Data wydania (puste = teraz)</label>
+                        <input type="datetime-local" id="songRelease" />
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Widoczność</label>
+                            <select id="songVisibility">
+                                <option value="private">Prywatna</option>
+                                <option value="public">Publiczna</option>
+                                <option value="link">Link (dostępny tylko przez link)</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="linkUrlGroup" style="display:none;">
+                            <label>Adres URL</label>
+                            <input type="url" id="songLinkUrl" placeholder="https://..." />
+                        </div>
+                    </div>
+                    <div class="btn-row">
+                        <button type="button" class="btn-cancel" id="modalSongCancel">Anuluj</button>
+                        <button type="submit" class="btn-confirm" id="modalSongConfirm">Zapisz</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================================================================
+        //  SUPABASE
+        // ================================================================
+        const SUPABASE_URL = 'https://ddwvoeydcsldwemsxyyh.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable__LpwBQfFUsyqu_xLXmcSuQ__CC891VC';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ================================================================
+        //  REFERENCJE
+        // ================================================================
+        const profileAvatar = document.getElementById('profileAvatar');
+        const profileUsername = document.getElementById('profileUsername');
+        const profileEmail = document.getElementById('profileEmail');
+        const userSongsContainer = document.getElementById('userSongsContainer');
+        const addSongBtn = document.getElementById('addSongBtn');
+        const addSongModal = document.getElementById('addSongModal');
+        const songTitle = document.getElementById('songTitle');
+        const songAlbum = document.getElementById('songAlbum');
+        const songRelease = document.getElementById('songRelease');
+        const songVisibility = document.getElementById('songVisibility');
+        const songLinkUrl = document.getElementById('songLinkUrl');
+        const linkUrlGroup = document.getElementById('linkUrlGroup');
+        const modalSongCancel = document.getElementById('modalSongCancel');
+        const addSongForm = document.getElementById('addSongForm');
+        const logoutBtn = document.getElementById('logoutBtn');
+
+        let currentUserId = null;
+
+        // ================================================================
+        //  POMOCNICZE
+        // ================================================================
+        function showMessage(msg) {
+            alert(msg);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ================================================================
+        //  SPRAWDZANIE SESJI I ŁADOWANIE PROFILU
+        // ================================================================
+        async function loadProfile() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                window.location.href = 'login.html';
+                return;
+            }
+            currentUserId = session.user.id;
+            const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('username, email, avatar_url')
+                .eq('id', currentUserId)
+                .maybeSingle();
+
+            if (profile) {
+                profileUsername.textContent = profile.username || 'Użytkownik';
+                profileEmail.textContent = profile.email || '';
+                if (profile.avatar_url) {
+                    profileAvatar.src = profile.avatar_url;
+                }
+            }
+            loadUserSongs();
+        }
+
+        // ================================================================
+        //  ŁADOWANIE UTWORÓW UŻYTKOWNIKA
+        // ================================================================
+        async function loadUserSongs() {
+            const { data, error } = await supabase
+                .from('songs')
+                .select('*')
+                .eq('user_id', currentUserId)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error(error);
+                return;
+            }
+            renderUserSongs(data);
+        }
+
+        function renderUserSongs(songs) {
+            if (!songs || songs.length === 0) {
+                userSongsContainer.innerHTML = '<p class="empty">Nie dodałeś jeszcze żadnych utworów.</p>';
+                return;
+            }
+            let html = '';
+            songs.forEach(song => {
+                const visibility = song.is_link ? 'link' : (song.is_public ? 'public' : 'private');
+                const label = { public: 'Publiczna', private: 'Prywatna', link: 'Link' } [visibility] || visibility;
+                html += `
+                    <div class="song-item">
+                        <div class="info">
+                            <span class="title">${escapeHtml(song.title)}</span>
+                            <span class="album">${escapeHtml(song.album || 'Brak albumu')}</span>
+                        </div>
+                        <div>
+                            <span class="status">${label}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            userSongsContainer.innerHTML = html;
+        }
+
+        // ================================================================
+        //  MODAL – DODAWANIE UTWORU
+        // ================================================================
+        addSongBtn.addEventListener('click', () => {
+            addSongModal.classList.add('active');
+            songRelease.value = '';
+            songVisibility.value = 'private';
+            linkUrlGroup.style.display = 'none';
+            songLinkUrl.value = '';
+            songTitle.value = '';
+            songAlbum.value = '';
+        });
+
+        modalSongCancel.addEventListener('click', () => {
+            addSongModal.classList.remove('active');
+        });
+
+        addSongModal.addEventListener('click', (e) => {
+            if (e.target === addSongModal) addSongModal.classList.remove('active');
+        });
+
+        songVisibility.addEventListener('change', () => {
+            if (songVisibility.value === 'link') {
+                linkUrlGroup.style.display = 'block';
+            } else {
+                linkUrlGroup.style.display = 'none';
+            }
+        });
+
+        // ================================================================
+        //  ZAPIS NOWEGO UTWORU
+        // ================================================================
+        addSongForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const title = songTitle.value.trim();
+            if (!title) {
+                showMessage('Tytuł jest wymagany.');
+                return;
+            }
+
+            const album = songAlbum.value.trim() || null;
+            const releaseDate = songRelease.value ? new Date(songRelease.value).toISOString() : null;
+            const visibility = songVisibility.value;
+            const isPublic = visibility === 'public';
+            const isLink = visibility === 'link';
+            const linkUrl = (isLink && songLinkUrl.value.trim()) ? songLinkUrl.value.trim() : null;
+
+            if (isLink && !linkUrl) {
+                showMessage('Dla typu "Link" podaj adres URL.');
+                return;
+            }
+
+            const newSong = {
+                user_id: currentUserId,
+                title: title,
+                album: album,
+                release_date: releaseDate,
+                is_public: isPublic,
+                is_link: isLink,
+                link_url: linkUrl,
+            };
+
+            const { data, error } = await supabase
+                .from('songs')
+                .insert(newSong)
+                .select();
+
+            if (error) {
+                showMessage('Błąd: ' + error.message);
+            } else {
+                showMessage('✅ Utwór dodany!');
+                addSongModal.classList.remove('active');
+                loadUserSongs();
+            }
+        });
+
+        // ================================================================
+        //  WYLOGOWANIE
+        // ================================================================
+        logoutBtn.addEventListener('click', async () => {
+            await supabase.auth.signOut();
+            window.location.href = 'login.html';
+        });
+
+        // ================================================================
+        //  START
+        // ================================================================
+        loadProfile();
+    </script>
+</body>
+</html>
